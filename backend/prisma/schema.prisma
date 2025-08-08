@@ -8,12 +8,13 @@ datasource db {
 }
 
 model posts {
-  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id         String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   title      String
   content    String
-  author_id  String   @db.Uuid
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  users      users    @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  author_id  String     @db.Uuid
+  created_at DateTime   @default(now()) @db.Timestamptz(6)
+  users      users      @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tags       post_tags[]
 }
 
 model users {
@@ -23,4 +24,21 @@ model users {
   name       String
   created_at DateTime @default(now()) @db.Timestamptz(6)
   posts      posts[]
+}
+
+model tags {
+  id         String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name       String      @unique
+  created_at DateTime    @default(now()) @db.Timestamptz(6)
+  posts      post_tags[]
+}
+
+model post_tags {
+  id      String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  post_id String @db.Uuid
+  tag_id  String @db.Uuid
+  post    posts  @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tag     tags   @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([post_id, tag_id])
 }

@@ -31,7 +31,7 @@ export default function RegisterPage() {
       setIsSubmitting(true);
       setError('');
       await registerUser(data.name, data.email, data.password);
-      router.push('/');
+      router.push('/login');
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');

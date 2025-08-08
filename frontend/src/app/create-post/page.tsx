@@ -12,17 +12,21 @@ import { useAuth } from '@/contexts/AuthContext';
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   content: z.string().min(1, 'Content is required'),
+  tags: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
 
 export default function CreatePostPage() {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<FormData>({
     resolver: zodResolver(schema)
   });
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isAuthenticated, loading } = useAuth();
+  
+  // Watch the tags input for real-time preview
+  const tagsInput = watch('tags');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -45,12 +49,31 @@ export default function CreatePostPage() {
     return null;
   }
 
+  // Function to parse hashtags from text
+  const parseHashtags = (text: string): string[] => {
+    if (!text) return [];
+    const hashtagRegex = /#[\w]+/g;
+    const matches = text.match(hashtagRegex);
+    return matches ? matches.map(tag => tag.substring(1)) : []; // Remove # symbol
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true);
-      const res = await axios.post('/posts', data);
+      
+      // Parse tags from the tags input
+      const parsedTags = parseHashtags(data.tags || '');
+      
+      // Prepare data for backend
+      const postData = {
+        title: data.title,
+        content: data.content,
+        tags: parsedTags.length > 0 ? parsedTags : undefined
+      };
+      
+      const res = await axios.post('/posts', postData);
       console.log(res.data);
-      router.push('/'); // Redirect to home page after successful creation
+      router.push('/mypage'); // Redirect to mypage after successful creation
     } catch (err) {
       console.error(err);
       alert('Failed to create post. Please try again.');
@@ -95,6 +118,41 @@ export default function CreatePostPage() {
               />
               {errors.content && (
                 <p className="text-red-500 text-sm mt-1">{errors.content.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-2">
+                Tags
+              </label>
+              <input
+                {...register('tags')}
+                id="tags"
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Add tags like #javascript #webdev #tutorial"
+              />
+              <p className="text-gray-500 text-sm mt-1">
+                Use hashtags like Twitter: #javascript #webdev #tutorial
+              </p>
+              {/* Preview parsed tags */}
+              {tagsInput && parseHashtags(tagsInput).length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium text-gray-700 mb-1">Detected tags:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {parseHashtags(tagsInput).map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {errors.tags && (
+                <p className="text-red-500 text-sm mt-1">{errors.tags.message}</p>
               )}
             </div>
 

@@ -8,10 +8,15 @@ export class PostService {
   constructor(private prisma: PrismaService) {}
 
   async create(createPostDto: CreatePostDto, authorId: string) {
+    const { tags, ...postData } = createPostDto;
+    
     return this.prisma.posts.create({
       data: {
-        ...createPostDto,
+        ...postData,
         author_id: authorId,
+        tags: tags ? {
+          create: await this.createTagConnections(tags)
+        } : undefined,
       },
       include: {
         users: {
@@ -19,6 +24,11 @@ export class PostService {
             id: true,
             name: true,
             email: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: true,
           },
         },
       },
@@ -33,6 +43,11 @@ export class PostService {
             id: true,
             name: true,
             email: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: true,
           },
         },
       },
@@ -53,6 +68,11 @@ export class PostService {
             email: true,
           },
         },
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
       },
     });
 
@@ -70,15 +90,28 @@ export class PostService {
       throw new ForbiddenException('You can only update your own posts');
     }
 
+    const { tags, ...postData } = updatePostDto;
+
     return this.prisma.posts.update({
       where: { id },
-      data: updatePostDto,
+      data: {
+        ...postData,
+        tags: tags !== undefined ? {
+          deleteMany: {},
+          create: await this.createTagConnections(tags)
+        } : undefined,
+      },
       include: {
         users: {
           select: {
             id: true,
             name: true,
             email: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: true,
           },
         },
       },
@@ -108,9 +141,72 @@ export class PostService {
             email: true,
           },
         },
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
       },
       orderBy: {
         created_at: 'desc',
+      },
+    });
+  }
+
+  private async createTagConnections(tagNames: string[]) {
+    const connections: { tag_id: string }[] = [];
+    
+    for (const tagName of tagNames) {
+      // Find or create tag
+      const tag = await this.prisma.tags.upsert({
+        where: { name: tagName },
+        update: {},
+        create: { name: tagName },
+      });
+      
+      connections.push({
+        tag_id: tag.id
+      });
+    }
+    
+    return connections;
+  }
+
+  async findByTag(tagName: string) {
+    return this.prisma.posts.findMany({
+      where: {
+        tags: {
+          some: {
+            tag: {
+              name: tagName
+            }
+          }
+        }
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+  }
+
+  async getAllTags() {
+    return this.prisma.tags.findMany({
+      orderBy: {
+        name: 'asc',
       },
     });
   }

@@ -51,7 +51,8 @@ export class AuthController {
   async register(@Body() dto: RegisterDto, @Response() res) {
     console.log('Register endpoint reached');
     console.log(dto);
-    return await this.authService.register(dto, res);
+    const result = await this.authService.register(dto, res);
+    res.status(200).json(result);
   }
 
   @UseGuards(LocalAuthGuard)

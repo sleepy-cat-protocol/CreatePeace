@@ -50,4 +50,14 @@ export class PostController {
   findByAuthor(@Param('authorId') authorId: string) {
     return this.postService.findByAuthor(authorId);
   }
+
+  @Get('by-tag/:tagName')
+  findByTag(@Param('tagName') tagName: string) {
+    return this.postService.findByTag(tagName);
+  }
+
+  @Get('tags/all')
+  getAllTags() {
+    return this.postService.getAllTags();
+  }
 }

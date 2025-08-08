@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsOptional, MinLength, IsArray } from 'class-validator';
 
 export class UpdatePostDto {
   @IsString()
@@ -10,4 +10,9 @@ export class UpdatePostDto {
   @IsOptional()
   @MinLength(1, { message: 'Content cannot be empty' })
   content?: string;
+
+  @IsArray()
+  @IsOptional()
+  @IsString({ each: true })
+  tags?: string[];
 } 

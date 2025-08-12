@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  NotFoundException,
 } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -17,6 +18,18 @@ import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 @Controller('posts')
 export class PostController {
   constructor(private readonly postService: PostService) {}
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  async findOne(@Param('id') id: string) {
+    console.log('start findOne controller', id);
+    const post = await this.postService.findOne(id);
+    console.log('end findOne controller', id);
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+    return post;
+  }
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -29,10 +42,6 @@ export class PostController {
     return this.postService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.postService.findOne(id);
-  }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')

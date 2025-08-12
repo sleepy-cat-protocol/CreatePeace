@@ -102,25 +102,26 @@ export default function MyPage() {
           ) : (
             <div className="space-y-6">
               {posts.map((post) => (
-                <article
-                  key={post.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                >
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                    {post.title}
-                  </h4>
-                  <p className="text-gray-600 mb-3 line-clamp-2">
-                    {post.content.length > 150
-                      ? `${post.content.substring(0, 150)}...`
-                      : post.content}
-                  </p>
-                  <div className="flex justify-between items-center text-sm text-gray-500">
-                    <span>By {post.users.name}</span>
-                    <span>
-                      {new Date(post.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </article>
+                <Link href={`/posts/${post.id}`} key={post.id}>
+                  <article
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                      {post.title}
+                    </h4>
+                    <p className="text-gray-600 mb-3 line-clamp-2">
+                      {post.content.length > 150
+                        ? `${post.content.substring(0, 150)}...`
+                        : post.content}
+                    </p>
+                    <div className="flex justify-between items-center text-sm text-gray-500">
+                      <span>By {post.users.name}</span>
+                      <span>
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </article>
+                </Link>
               ))}
             </div>
           )}

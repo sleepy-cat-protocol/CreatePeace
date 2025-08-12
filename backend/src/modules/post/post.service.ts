@@ -58,6 +58,7 @@ export class PostService {
   }
 
   async findOne(id: string) {
+    console.log('start findOne service', id);
     const post = await this.prisma.posts.findUnique({
       where: { id },
       include: {
@@ -70,16 +71,21 @@ export class PostService {
         },
         tags: {
           include: {
-            tag: true,
+            tag: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
     });
 
     if (!post) {
-      throw new NotFoundException('Post not found');
+      throw new NotFoundException('Post with id ' + id + ' not found');
     }
-
+    console.log(post.id, post.title, post.users.name, post.tags);
     return post;
   }
 

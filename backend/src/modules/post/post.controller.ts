@@ -3,7 +3,7 @@ import {
   Get,
   Post,
   Body,
-  Patch,
+  Put,
   Param,
   Delete,
   UseGuards,
@@ -44,7 +44,7 @@ export class PostController {
 
 
   @UseGuards(JwtAuthGuard)
-  @Patch(':id')
+  @Put(':id')
   update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto, @Request() req) {
     return this.postService.update(id, updatePostDto, req.user.id);
   }

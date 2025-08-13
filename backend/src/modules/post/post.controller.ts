@@ -20,7 +20,7 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   async findOne(@Param('id') id: string) {
     console.log('start findOne controller', id);
     const post = await this.postService.findOne(id);

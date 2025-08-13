@@ -1,6 +1,7 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { Controller, Get, Query } from '@nestjs/common';
 import { SearchService } from './search.service';
+// import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+
 
 
 
@@ -9,7 +10,7 @@ export class SearchController {
     constructor(private readonly searchService: SearchService) {}
 
     @Get()
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     async search(@Query('q') query: string) {
         if (!query || query.trim().length === 0) {
             return {
@@ -24,19 +25,19 @@ export class SearchController {
     }
 
     @Get('tags')
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     searchTags(@Query('q') query: string) {
       return this.searchService.searchTags(query);
     }
   
     @Get('posts')
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     searchPosts(@Query('q') query: string) {
       return this.searchService.searchPosts(query);
     }
   
     @Get('users')
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     searchUsers(@Query('q') query: string) {
       return this.searchService.searchUsers(query);
     }

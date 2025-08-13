@@ -36,15 +36,19 @@ export default function PostContent({ postId }: PostContentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login');
-      return;
-    }
+  // useEffect(() => {
+  //   if (!authLoading && !isAuthenticated) {
+  //     router.push('/login');
+  //     return;
+  //   }
 
-    if (isAuthenticated) {
+  //   if (isAuthenticated) {
+  //     fetchPost();
+  //   }
+  // }, [isAuthenticated, authLoading, router, postId]);
+
+  useEffect(() => {
       fetchPost();
-    }
   }, [isAuthenticated, authLoading, router, postId]);
 
   const fetchPost = async () => {
@@ -74,31 +78,31 @@ export default function PostContent({ postId }: PostContentProps) {
   };
 
   // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading...</div>
-      </div>
-    );
-  }
+  // if (authLoading) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  //       <div className="text-lg text-gray-600">Loading...</div>
+  //     </div>
+  //   );
+  // }
 
-  // Redirect if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h1>
-          <p className="text-gray-600 mb-6">Please log in to view this post.</p>
-          <Link
-            href="/login"
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Go to Login
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // // Redirect if not authenticated
+  // if (!isAuthenticated) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <h1 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h1>
+  //         <p className="text-gray-600 mb-6">Please log in to view this post.</p>
+  //         <Link
+  //           href="/login"
+  //           className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+  //         >
+  //           Go to Login
+  //         </Link>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Show loading while fetching post
   if (loading) {

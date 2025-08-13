@@ -10,11 +10,11 @@ export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // useEffect(() => {
-  //   if (!authLoading && isAuthenticated) {
-  //     router.push('/');
-  //   }
-  // }, [isAuthenticated, authLoading, router]);
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.push('/mypage');
+    }
+  }, [isAuthenticated, authLoading, router]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,9 +32,9 @@ export default function Home() {
     );
   }
 
-  // if (isAuthenticated) {
-  //   return null; // Will redirect to mypage
-  // }
+  if (isAuthenticated) {
+    return null; // Will redirect to mypage
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

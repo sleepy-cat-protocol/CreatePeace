@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -8,12 +8,21 @@ import { useRouter } from 'next/navigation';
 export default function Home() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push('/mypage');
+  // useEffect(() => {
+  //   if (!authLoading && isAuthenticated) {
+  //     router.push('/');
+  //   }
+  // }, [isAuthenticated, authLoading, router]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
-  }, [isAuthenticated, authLoading, router]);
+  };
 
   if (authLoading) {
     return (
@@ -23,9 +32,9 @@ export default function Home() {
     );
   }
 
-  if (isAuthenticated) {
-    return null; // Will redirect to mypage
-  }
+  // if (isAuthenticated) {
+  //   return null; // Will redirect to mypage
+  // }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -33,12 +42,47 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center py-16">
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Welcome to MyBlog
+            Welcome to CreatePeace
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Share your thoughts, stories, and ideas with the world. 
             Join our community of writers and readers.
           </p>
+
+          {/* Search Bar */}
+          <div className="max-w-md mx-auto mb-8">
+            <form onSubmit={handleSearch} className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search posts, users, or tags..."
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-left"
+              />
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-blue-600 transition-colors"
+              >
+                <svg 
+                  className="h-5 w-5" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                  />
+                </svg>
+              </button>
+            </form>
+            <p className="text-sm text-gray-500 mt-2">
+              Press Enter or click the magnifier to search
+            </p>
+          </div>
+
           <div className="flex justify-center space-x-4">
             <Link
               href="/register"
@@ -84,12 +128,12 @@ export default function Home() {
           <div className="text-center">
             <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Discover</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Search & Discover</h3>
             <p className="text-gray-600">
-              Discover amazing content from writers around the world.
+              Search and discover amazing content, writers, and topics from around the world.
             </p>
           </div>
         </div>

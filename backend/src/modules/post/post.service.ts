@@ -3,17 +3,45 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 
+enum PostStatus {
+  DRAFT = 'DRAFT',
+  PUBLISHED = 'PUBLISHED',
+  ARCHIVED = 'ARCHIVED',
+  SCHEDULED = 'SCHEDULED',
+}
+
 @Injectable()
 export class PostService {
   constructor(private prisma: PrismaService) {}
 
   async create(createPostDto: CreatePostDto, authorId: string) {
-    const { tags, ...postData } = createPostDto;
+    const { tags, scheduled_for, ...postData } = createPostDto;
     
+    // Generate slug from title
+    const slug = this.generateSlug(createPostDto.title);
+    
+    // Handle publishing logic (simplified - no scheduling for now)
+    let published_at: Date | null = null;
+    let status = createPostDto.status || PostStatus.DRAFT;
+    
+    // If user tries to schedule, just save as draft for now
+    if (status === PostStatus.SCHEDULED) {
+      status = PostStatus.DRAFT;
+    }
+    
+    if (status === PostStatus.PUBLISHED) {
+      published_at = new Date();
+    }
+
     return this.prisma.posts.create({
       data: {
         ...postData,
+        status: status as PostStatus,
+        slug,
         author_id: authorId,
+        published_at,
+        // Keep scheduled_for field but don't use it yet
+        scheduled_for: null,
         tags: tags ? {
           create: await this.createTagConnections(tags)
         } : undefined,
@@ -24,6 +52,7 @@ export class PostService {
             id: true,
             name: true,
             email: true,
+            username: true,
           },
         },
         tags: {
@@ -96,12 +125,39 @@ export class PostService {
       throw new ForbiddenException('You can only update your own posts');
     }
 
-    const { tags, ...postData } = updatePostDto;
+    const { tags, scheduled_for, ...postData } = updatePostDto;
+
+    // Handle publishing logic (simplified - no scheduling for now)
+    let published_at = (post as any).published_at;
+    let status = (updatePostDto.status as any) || (post as any).status;
+    
+    // If user tries to schedule, just save as draft for now
+    if (status === 'SCHEDULED') {
+      status = 'DRAFT';
+    }
+    
+    if (status === 'PUBLISHED' && !(post as any).published_at) {
+      published_at = new Date();
+    } else if (status === 'DRAFT' && (post as any).published_at) {
+      // If changing from published to draft, remove published_at
+      published_at = null;
+    }
+
+    // Update slug if title changed
+    let slug = (post as any).slug;
+    if (updatePostDto.title && updatePostDto.title !== post.title) {
+      slug = this.generateSlug(updatePostDto.title);
+    }
 
     return this.prisma.posts.update({
       where: { id },
       data: {
         ...postData,
+        status,
+        slug,
+        published_at,
+        // Keep scheduled_for field but don't use it yet
+        scheduled_for: null,
         tags: tags !== undefined ? {
           deleteMany: {},
           create: await this.createTagConnections(tags)
@@ -113,6 +169,7 @@ export class PostService {
             id: true,
             name: true,
             email: true,
+            username: true,
           },
         },
         tags: {
@@ -215,5 +272,15 @@ export class PostService {
         name: 'asc',
       },
     });
+  }
+
+  private generateSlug(title: string): string {
+    return title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .trim()
+      + '-' + Date.now(); // Add timestamp to ensure uniqueness
   }
 }

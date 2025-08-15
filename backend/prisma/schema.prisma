@@ -7,30 +7,125 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  SCHEDULED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
 model posts {
-  id         String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title      String
-  content    String
-  author_id  String     @db.Uuid
-  created_at DateTime   @default(now()) @db.Timestamptz(6)
-  users      users      @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  tags       post_tags[]
+  id        String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title     String
+  content   String // Rich text content (HTML/Markdown)
+  summary   String? // Short summary/description (like AO3)
+  slug      String  @unique
+  author_id String  @db.Uuid
+
+  // Publishing workflow
+  status        PostStatus @default(DRAFT)
+  published_at  DateTime?
+  scheduled_for DateTime?
+
+  // Creative work fields (like AO3)
+  word_count    Int     @default(0)
+  chapter_count Int     @default(1)
+  is_complete   Boolean @default(true)
+
+  // Content warnings and ratings
+  content_warning String? // Content warnings
+  rating          String? // G, T, M, E (like AO3 ratings)
+
+  // Media content
+  featured_image String? // URL to featured image
+
+  // Statistics
+  view_count Int @default(0)
+  read_time  Int @default(0) // in minutes
+
+  // Timestamps
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  users       users              @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tags        post_tags[]
+  likes       post_likes[]
+  collections post_collections[]
+  comments    comments[]
+  media       post_media[] // Media attachments in post
+  views       post_views[]
 }
 
 model users {
-  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  email      String   @unique
-  password   String
-  name       String
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email    String @unique
+  password String
+  name     String
+
+  // Enhanced profile fields
+  username      String?   @unique
+  bio           String?
+  avatar_url    String?
+  website       String?
+  location      String?
+  role          UserRole  @default(USER)
+  is_verified   Boolean   @default(false)
+  is_active     Boolean   @default(true)
+  last_login_at DateTime?
+
+  // Social links
+  twitter_handle  String?
+  linkedin_url    String?
+  github_username String?
+
+  // Timestamps
   created_at DateTime @default(now()) @db.Timestamptz(6)
-  posts      posts[]
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  posts             posts[]
+  tag_subscriptions user_tag_subscriptions[]
+  likes             post_likes[]
+  collections       post_collections[]
+  comments          comments[]
+  comment_likes     comment_likes[]
+  media             media[]
+
+  // Follow relationships
+  followers user_follows[] @relation("UserFollowing") // Users who follow this user
+  following user_follows[] @relation("UserFollows") // Users this user follows
+
+  // Blacklist & Activity
+  blacklisted_tags user_tag_blacklist[]
+  views            post_views[]
 }
 
 model tags {
-  id         String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name       String      @unique
-  created_at DateTime    @default(now()) @db.Timestamptz(6)
-  posts      post_tags[]
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name         String   @unique
+  description  String? // Optional description for the tag
+  tag_type     String? // "fandom", "character", "relationship", "genre", "warning", etc.
+  is_canonical Boolean  @default(false) // For moderated/canonical tags
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  posts          post_tags[]
+  subscribers    user_tag_subscriptions[]
+  blacklisted_by user_tag_blacklist[]
 }
 
 model post_tags {
@@ -41,4 +136,160 @@ model post_tags {
   tag     tags   @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([post_id, tag_id])
+}
+
+model user_tag_subscriptions {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  tag_id     String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  users users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tags  tags  @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  // Ensure one subscription per user per tag
+  @@unique([user_id, tag_id])
+  @@map("user_tag_subscriptions")
+}
+
+// 1. POST LIKES
+model post_likes {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  post_id    String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  users users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  posts posts @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
+  // Ensure one like per user per post
+  @@unique([user_id, post_id])
+  @@map("post_likes")
+}
+
+// 2. POST COLLECTIONS
+model post_collections {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  post_id    String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  users users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  posts posts @relation(fields: [post_id], references: [id], onDelete: Cascade)
+
+  // Ensure one collection per user per post
+  @@unique([user_id, post_id])
+  @@map("post_collections")
+}
+
+// 3. USER FOLLOWS
+model user_follows {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  follower_id  String   @db.Uuid // User who follows
+  following_id String   @db.Uuid // User being followed
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  follower  users @relation("UserFollows", fields: [follower_id], references: [id], onDelete: Cascade)
+  following users @relation("UserFollowing", fields: [following_id], references: [id], onDelete: Cascade)
+
+  // Ensure one follow per user pair & prevent self-follow
+  @@unique([follower_id, following_id])
+  @@map("user_follows")
+}
+
+// 4. TAG BLACKLIST
+model user_tag_blacklist {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  tag_id     String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  users users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  tags  tags  @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  // Ensure one blacklist entry per user per tag
+  @@unique([user_id, tag_id])
+  @@map("user_tag_blacklist")
+}
+
+// COMMENTS SYSTEM
+model comments {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  post_id     String   @db.Uuid
+  user_id     String   @db.Uuid
+  parent_id   String?  @db.Uuid // For nested replies
+  content     String
+  is_approved Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  posts   posts           @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  users   users           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  parent  comments?       @relation("CommentReplies", fields: [parent_id], references: [id])
+  replies comments[]      @relation("CommentReplies")
+  likes   comment_likes[]
+}
+
+model comment_likes {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String   @db.Uuid
+  comment_id String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  users    users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  comments comments @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, comment_id])
+}
+
+// MEDIA MANAGEMENT
+model media {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id       String    @db.Uuid
+  filename      String
+  original_name String
+  file_path     String
+  file_size     Int
+  mime_type     String
+  media_type    MediaType
+  alt_text      String?
+  caption       String?
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+
+  users      users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  post_media post_media[]
+}
+
+// POST-MEDIA RELATIONSHIP (for mixed content posts)
+model post_media {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  post_id  String @db.Uuid
+  media_id String @db.Uuid
+  order    Int    @default(0) // For ordering media in post
+
+  posts posts @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  media media @relation(fields: [media_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, media_id])
+}
+
+// POST VIEWS TRACKING
+model post_views {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  post_id    String   @db.Uuid
+  user_id    String?  @db.Uuid // Nullable for anonymous views
+  ip_address String?
+  viewed_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  posts posts  @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  users users? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@unique([post_id, user_id, ip_address]) // Prevent duplicate views
 }

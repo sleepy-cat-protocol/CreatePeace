@@ -10,12 +10,36 @@ interface Post {
   id: string;
   title: string;
   content: string;
+  summary?: string;
+  slug: string;
   author_id: string;
   created_at: string;
+  updated_at: string;
+  published_at?: string;
+  
+  // Creative work fields
+  word_count: number;
+  chapter_count: number;
+  is_complete: boolean;
+  
+  // Content warnings and ratings
+  content_warning?: string;
+  rating?: string;
+  
+  // Media
+  featured_image?: string;
+  
+  // Status
+  status: string;
+  
+  // Statistics
+  view_count: number;
+  
   users: {
     id: string;
     name: string;
     email: string;
+    username?: string;
   };
   tags: Array<{
     tag: {
@@ -172,48 +196,115 @@ export default function PostContent({ postId }: PostContentProps) {
         </div>
 
         {/* Post Content */}
-        <article className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-          {/* Post Header */}
-          <header className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              {post.title}
-            </h1>
-            
-            {/* Post Meta */}
-            <div className="flex items-center text-gray-600 text-sm mb-4">
-              <span>By {post.users?.name || post.users?.email || 'Unknown Author'}</span>
-              <span className="mx-2">•</span>
-              <span>
-                {post.created_at 
-                  ? new Date(post.created_at).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })
-                  : 'Unknown Date'
-                }
-              </span>
+        <article className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {/* Featured Image */}
+          {post.featured_image && (
+            <div className="w-full h-64 bg-gray-200">
+              <img 
+                src={post.featured_image} 
+                alt={post.title}
+                className="w-full h-full object-cover"
+              />
             </div>
+          )}
 
-            {/* Tags */}
-            {post.tags && post.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {post.tags.map((tagItem, index) => (
-                  <span
-                    key={tagItem.tag?.id || index}
-                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
-                  >
-                    {tagItem.tag?.name || 'Unknown Tag'}
+          <div className="p-8">
+            {/* Post Header */}
+            <header className="mb-8">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                {post.title}
+              </h1>
+              
+              {/* Summary */}
+              {post.summary && (
+                <div className="text-lg text-gray-700 mb-4 p-4 bg-gray-50 rounded-lg">
+                  <p className="italic">{post.summary}</p>
+                </div>
+              )}
+
+              {/* Author and Meta Info */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center text-gray-600 text-sm">
+                  <span>By {post.users?.username || post.users?.name || 'Unknown Author'}</span>
+                  <span className="mx-2">•</span>
+                  <span>
+                    {post.published_at || post.created_at
+                      ? new Date(post.published_at || post.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : 'Unknown Date'
+                    }
                   </span>
-                ))}
+                  {post.updated_at !== post.created_at && (
+                    <>
+                      <span className="mx-2">•</span>
+                      <span className="text-blue-600">
+                        Updated {new Date(post.updated_at).toLocaleDateString()}
+                      </span>
+                    </>
+                  )}
+                </div>
+                
+                {/* View Count */}
+                <div className="text-sm text-gray-500">
+                  {post.view_count} {post.view_count === 1 ? 'view' : 'views'}
+                </div>
               </div>
-            )}
-          </header>
 
-          {/* Post Body */}
-          <div className="prose prose-lg max-w-none">
-            <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-              {post.content}
+              {/* Work Details */}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
+                <span className="flex items-center">
+                  📖 {post.word_count.toLocaleString()} words
+                </span>
+                <span className="flex items-center">
+                  📑 {post.chapter_count} {post.chapter_count === 1 ? 'chapter' : 'chapters'}
+                </span>
+                <span className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  post.is_complete 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  {post.is_complete ? '✓ Complete' : '⏳ In Progress'}
+                </span>
+                {post.rating && (
+                  <span className="flex items-center px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
+                    Rated {post.rating}
+                  </span>
+                )}
+              </div>
+
+              {/* Content Warning */}
+              {post.content_warning && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <span className="text-yellow-600 font-medium mr-2">⚠️ Content Warning:</span>
+                    <span className="text-yellow-800">{post.content_warning}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Tags */}
+              {post.tags && post.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {post.tags.map((tagItem, index) => (
+                    <span
+                      key={tagItem.tag?.id || index}
+                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors cursor-pointer"
+                    >
+                      #{tagItem.tag?.name || 'Unknown Tag'}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </header>
+
+            {/* Post Body */}
+            <div className="prose prose-lg max-w-none">
+              <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-base">
+                {post.content}
+              </div>
             </div>
           </div>
         </article>

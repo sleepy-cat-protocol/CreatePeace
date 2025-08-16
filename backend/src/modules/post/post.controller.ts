@@ -13,6 +13,8 @@ import {
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { LikePostDto } from './dto/like-post.dto';
+import { CollectPostDto } from './dto/collect-post.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 
 @Controller('posts')
@@ -68,5 +70,35 @@ export class PostController {
   @Get('tags/all')
   getAllTags() {
     return this.postService.getAllTags();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/like')
+  async likePost(@Param('id') postId: string, @Request() req) {
+    return this.postService.likePost(postId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/like')
+  async unlikePost(@Param('id') postId: string, @Request() req) {
+    return this.postService.unlikePost(postId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/collect')
+  async collectPost(@Param('id') postId: string, @Request() req) {
+    return this.postService.collectPost(postId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/collect')
+  async uncollectPost(@Param('id') postId: string, @Request() req) {
+    return this.postService.uncollectPost(postId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/status')
+  async getPostStatus(@Param('id') postId: string, @Request() req) {
+    return this.postService.getPostStatus(postId, req.user.id);
   }
 }

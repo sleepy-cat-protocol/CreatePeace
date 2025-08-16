@@ -38,8 +38,9 @@ interface Post {
 
 interface User {
   id: string;
-  name: string;
+  username: string;
   email: string;
+  avatar_url: string;
   created_at: string;
   posts: Array<{
     id: string;
@@ -328,16 +329,30 @@ export default function SearchResults({ query }: SearchResultsProps) {
                   {results.users.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {results.users.map((user) => (
-                        <div key={user.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <Link
+                          key={user.id}
+                          href={`/users/${user.username || user.id}/dashboard`}
+                          className="block border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow hover:border-blue-300"
+                        >
                           <div className="flex items-center mb-3">
-                            <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-blue-600 font-semibold text-sm">
-                                {user.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
+                            {user.avatar_url ? (
+                              <img
+                                className="h-10 w-10 rounded-full object-cover"
+                                src={user.avatar_url}
+                                alt={user.username}
+                              />
+                            ) : (
+                              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-sm">
+                                  {(user.username || user.email || 'U').charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
                             <div className="ml-3">
-                              <h3 className="font-semibold text-gray-900">{user.name}</h3>
-                              <p className="text-gray-600 text-sm">{user.email}</p>
+                              <h3 className="font-semibold text-gray-900">{user.username || user.email}</h3>
+                              {user.username && (
+                                <p className="text-gray-600 text-sm">@{user.username}</p>
+                              )}
                             </div>
                           </div>
                           <p className="text-gray-500 text-xs mb-3">
@@ -350,19 +365,18 @@ export default function SearchResults({ query }: SearchResultsProps) {
                                 Recent Posts ({user.posts.length}):
                               </p>
                               {user.posts.slice(0, 2).map((post) => (
-                                <Link
+                                <div
                                   key={post.id}
-                                  href={`/posts/${post.id}`}
-                                  className="block text-sm text-blue-600 hover:text-blue-800 mb-1 truncate"
+                                  className="text-sm text-blue-600 mb-1 truncate"
                                 >
                                   {post.title}
-                                </Link>
+                                </div>
                               ))}
                             </div>
                           ) : (
                             <p className="text-sm text-gray-500">No posts yet</p>
                           )}
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   ) : (

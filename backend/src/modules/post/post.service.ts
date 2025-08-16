@@ -96,6 +96,7 @@ export class PostService {
             id: true,
             name: true,
             email: true,
+            username: true,
           },
         },
         tags: {
@@ -106,6 +107,13 @@ export class PostService {
                 name: true,
               },
             },
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            collections: true,
+            comments: true,
           },
         },
       },
@@ -272,6 +280,158 @@ export class PostService {
         name: 'asc',
       },
     });
+  }
+
+  async likePost(postId: string, userId: string) {
+    // Check if post exists
+    const post = await this.prisma.posts.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    // Check if already liked
+    const existingLike = await this.prisma.post_likes.findUnique({
+      where: {
+        user_id_post_id: {
+          user_id: userId,
+          post_id: postId,
+        },
+      },
+    });
+
+    if (existingLike) {
+      return { message: 'Post already liked', isLiked: true };
+    }
+
+    // Create like
+    await this.prisma.post_likes.create({
+      data: {
+        user_id: userId,
+        post_id: postId,
+      },
+    });
+
+    return { message: 'Post liked successfully', isLiked: true };
+  }
+
+  async unlikePost(postId: string, userId: string) {
+    // Check if like exists
+    const existingLike = await this.prisma.post_likes.findUnique({
+      where: {
+        user_id_post_id: {
+          user_id: userId,
+          post_id: postId,
+        },
+      },
+    });
+
+    if (!existingLike) {
+      return { message: 'Post not liked', isLiked: false };
+    }
+
+    // Remove like
+    await this.prisma.post_likes.delete({
+      where: {
+        user_id_post_id: {
+          user_id: userId,
+          post_id: postId,
+        },
+      },
+    });
+
+    return { message: 'Post unliked successfully', isLiked: false };
+  }
+
+  async collectPost(postId: string, userId: string) {
+    // Check if post exists
+    const post = await this.prisma.posts.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    // Check if already collected
+    const existingCollection = await this.prisma.post_collections.findUnique({
+      where: {
+        user_id_post_id: {
+          user_id: userId,
+          post_id: postId,
+        },
+      },
+    });
+
+    if (existingCollection) {
+      return { message: 'Post already collected', isCollected: true };
+    }
+
+    // Create collection
+    await this.prisma.post_collections.create({
+      data: {
+        user_id: userId,
+        post_id: postId,
+      },
+    });
+
+    return { message: 'Post collected successfully', isCollected: true };
+  }
+
+  async uncollectPost(postId: string, userId: string) {
+    // Check if collection exists
+    const existingCollection = await this.prisma.post_collections.findUnique({
+      where: {
+        user_id_post_id: {
+          user_id: userId,
+          post_id: postId,
+        },
+      },
+    });
+
+    if (!existingCollection) {
+      return { message: 'Post not collected', isCollected: false };
+    }
+
+    // Remove collection
+    await this.prisma.post_collections.delete({
+      where: {
+        user_id_post_id: {
+          user_id: userId,
+          post_id: postId,
+        },
+      },
+    });
+
+    return { message: 'Post uncollected successfully', isCollected: false };
+  }
+
+  async getPostStatus(postId: string, userId: string) {
+    const [like, collection] = await Promise.all([
+      this.prisma.post_likes.findUnique({
+        where: {
+          user_id_post_id: {
+            user_id: userId,
+            post_id: postId,
+          },
+        },
+      }),
+      this.prisma.post_collections.findUnique({
+        where: {
+          user_id_post_id: {
+            user_id: userId,
+            post_id: postId,
+          },
+        },
+      }),
+    ]);
+
+    return {
+      isLiked: !!like,
+      isCollected: !!collection,
+    };
   }
 
   private generateSlug(title: string): string {

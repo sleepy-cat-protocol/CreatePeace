@@ -87,7 +87,7 @@ export default function CreatePostPage() {
       const response = await axios.post('/posts', postData);
       
       console.log('Post created successfully:', response.data);
-      router.push('/mypage');
+      router.push(`/users/${user?.username || user?.id}/dashboard`);
     } catch (error: any) {
       console.error('Failed to create post:', error);
       setSubmitError(
@@ -131,7 +131,7 @@ export default function CreatePostPage() {
               <p className="text-gray-600 mt-2">Share your creative work with the community</p>
             </div>
             <Link
-              href="/mypage"
+              href={`/users/${user?.username || user?.id}/dashboard`}
               className="text-blue-600 hover:text-blue-800 font-medium"
             >
               ← Back to My Page
@@ -361,7 +361,7 @@ export default function CreatePostPage() {
           {/* Submit Buttons */}
           <div className="flex justify-between items-center pt-6 border-t border-gray-200">
             <Link
-              href="/mypage"
+              href={`/users/${user?.username || user?.id}/dashboard`}
               className="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors"
             >
               Cancel

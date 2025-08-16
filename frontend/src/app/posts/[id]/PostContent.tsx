@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
 import Link from 'next/link';
+import PostActions from '@/components/PostActions';
 
 interface Post {
   id: string;
@@ -47,6 +48,11 @@ interface Post {
       name: string;
     };
   }>;
+  _count?: {
+    likes: number;
+    collections: number;
+    comments: number;
+  };
 }
 
 interface PostContentProps {
@@ -225,7 +231,13 @@ export default function PostContent({ postId }: PostContentProps) {
               {/* Author and Meta Info */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center text-gray-600 text-sm">
-                  <span>By {post.users?.username || post.users?.name || 'Unknown Author'}</span>
+                  <span>By </span>
+                  <Link
+                    href={`/users/${post.users?.username || post.users?.id}/dashboard`}
+                    className="text-blue-600 hover:text-blue-800 hover:underline ml-1"
+                  >
+                    {post.users?.username || post.users?.name || 'Unknown Author'}
+                  </Link>
                   <span className="mx-2">•</span>
                   <span>
                     {post.published_at || post.created_at
@@ -298,6 +310,15 @@ export default function PostContent({ postId }: PostContentProps) {
                   ))}
                 </div>
               )}
+              {/* Like and Collect Actions */}
+              <div className="border-t border-gray-200 pt-4 mt-6">
+                <PostActions 
+                  postId={post.id}
+                  initialLikeCount={post._count?.likes || 0}
+                  initialCollectionCount={post._count?.collections || 0}
+                  className="justify-start"
+                />
+              </div>
             </header>
 
             {/* Post Body */}

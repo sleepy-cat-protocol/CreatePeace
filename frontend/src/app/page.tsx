@@ -9,10 +9,11 @@ export default function Home() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push('/mypage');
+      router.push(`/users/${currentUser?.username || currentUser?.id}/dashboard`);
     }
   }, [isAuthenticated, authLoading, router]);
 

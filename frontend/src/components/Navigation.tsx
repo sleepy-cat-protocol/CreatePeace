@@ -1,17 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { ChevronDownIcon, UserIcon, PencilIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 
 export default function Navigation() {
   const { user, isAuthenticated, logout, loading } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     await logout();
+    setIsDropdownOpen(false);
     router.push('/');
   };
 
@@ -22,6 +26,20 @@ export default function Navigation() {
       setSearchQuery(''); // Clear search after navigation
     }
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -50,7 +68,9 @@ export default function Navigation() {
             </form>
           </div>
           
-          <div className="text-gray-600">Loading...</div>
+          <div className="flex items-center space-x-4">
+            <div className="text-gray-600">Loading...</div>
+          </div>
         </div>
       </nav>
     );
@@ -86,12 +106,17 @@ export default function Navigation() {
         <div className="flex items-center space-x-4">
           {isAuthenticated ? (
             <>
-              <span className="text-gray-600 text-sm hidden md:block">Welcome, {user?.name}</span>
               <Link
-                href="/mypage"
+                href={`/users/${user?.username || user?.id}/dashboard`}
                 className="text-gray-600 hover:text-gray-800 text-sm font-medium"
               >
-                My Page
+                My Dashboard
+              </Link>
+              <Link
+                href="/subscribed-posts"
+                className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+              >
+                Subscribed Posts
               </Link>
               <Link
                 href="/create-post"
@@ -99,12 +124,53 @@ export default function Navigation() {
               >
                 Create Post
               </Link>
-              <button
-                onClick={handleLogout}
-                className="text-red-600 hover:text-red-800 text-sm font-medium"
-              >
-                Logout
-              </button>
+              
+              {/* User Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 text-sm font-medium focus:outline-none"
+                >
+                  <span className="hidden md:block">Welcome, {user?.name}</span>
+                  <span className="md:hidden">
+                    {user?.avatar_url ? (
+                      <img
+                        className="h-8 w-8 rounded-full object-cover"
+                        src={user.avatar_url}
+                        alt={user.name}
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+                        <UserIcon className="h-4 w-4 text-gray-600" />
+                      </div>
+                    )}
+                  </span>
+                  <ChevronDownIcon className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="py-1">
+                      <Link
+                        href="/profile/edit"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <PencilIcon className="h-4 w-4 mr-3" />
+                        Edit Profile
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <ArrowRightOnRectangleIcon className="h-4 w-4 mr-3" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>

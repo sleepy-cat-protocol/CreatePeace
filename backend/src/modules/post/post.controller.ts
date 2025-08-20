@@ -101,4 +101,15 @@ export class PostController {
   async getPostStatus(@Param('id') postId: string, @Request() req) {
     return this.postService.getPostStatus(postId, req.user.id);
   }
+
+  @Post(':id/view')
+  async incrementViewCount(@Param('id') postId: string, @Request() req) {
+    // Get user ID if authenticated, null if not (this endpoint is public)
+    const userId = req.user?.id || null;
+    
+    // Get IP address for tracking anonymous users
+    const ipAddress = req.ip || req.connection?.remoteAddress || req.headers['x-forwarded-for'] || null;
+    
+    return this.postService.incrementViewCount(postId, userId, ipAddress);
+  }
 }

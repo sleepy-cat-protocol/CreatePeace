@@ -28,6 +28,17 @@ export class UsersController {
     return this.usersService.updateProfile(req.user.id, updateProfileDto);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('subscription-feed')
+  async getSubscriptionFeed(
+    @Request() req,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20'
+  ) {
+    console.log('getSubscriptionFeed controller', req.user.id);
+    return this.usersService.getSubscriptionFeed(req.user.id, parseInt(page), parseInt(limit));
+  }
+
   @Get(':id')
   async getUserProfile(@Param('id') id: string) {
     console.log('getUserProfile', id);
@@ -153,5 +164,25 @@ export class UsersController {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 10) : 20;
     return this.usersService.getUserCollectedPosts(id, pageNum, limitNum);
+  }
+
+
+
+  @UseGuards(JwtAuthGuard)
+  @Post('tags/:tagId/subscribe')
+  async subscribeToTag(@Request() req, @Param('tagId') tagId: string) {
+    return this.usersService.subscribeToTag(req.user.id, tagId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('tags/:tagId/subscribe')
+  async unsubscribeFromTag(@Request() req, @Param('tagId') tagId: string) {
+    return this.usersService.unsubscribeFromTag(req.user.id, tagId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('tags/:tagId/subscription-status')
+  async getTagSubscriptionStatus(@Request() req, @Param('tagId') tagId: string) {
+    return this.usersService.getTagSubscriptionStatus(req.user.id, tagId);
   }
 }

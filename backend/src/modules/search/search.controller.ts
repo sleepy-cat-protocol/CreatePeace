@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { SearchService } from './search.service';
+import { AdvancedSearchDto } from './dto/advanced-search.dto';
 // import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 
 
@@ -40,5 +41,10 @@ export class SearchController {
     // @UseGuards(JwtAuthGuard)
     searchUsers(@Query('q') query: string) {
       return this.searchService.searchUsers(query);
+    }
+
+    @Get('advanced')
+    advancedSearch(@Query() params: AdvancedSearchDto) {
+      return this.searchService.advancedSearch(params);
     }
 }

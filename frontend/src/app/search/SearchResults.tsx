@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
 import Link from 'next/link';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import AdvancedSearchFilters, { SearchFilters } from '@/components/AdvancedSearchFilters';
+import AdvancedSearchResults from '@/components/AdvancedSearchResults';
 
 interface Tag {
   id: string;
@@ -63,9 +65,19 @@ export default function SearchResults({ query }: SearchResultsProps) {
     posts: Post[];
     users: User[];
   }>({ tags: [], posts: [], users: [] });
+  const [advancedResults, setAdvancedResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'tags' | 'posts' | 'users'>('tags');
+  const [useAdvancedSearch, setUseAdvancedSearch] = useState(false);
+  const [filters, setFilters] = useState<SearchFilters>({
+    type: 'all',
+    dateFrom: '',
+    dateTo: '',
+    sortBy: 'relevance',
+    sortOrder: 'desc',
+  });
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     // if (!authLoading && !isAuthenticated) {
@@ -81,9 +93,18 @@ export default function SearchResults({ query }: SearchResultsProps) {
   const performSearch = async (searchTerm: string) => {
     if (!searchTerm.trim()) return;
 
+    if (useAdvancedSearch) {
+      await performAdvancedSearch(searchTerm);
+    } else {
+      await performBasicSearch(searchTerm);
+    }
+  };
+
+  const performBasicSearch = async (searchTerm: string) => {
     try {
       setLoading(true);
       setError(null);
+      setAdvancedResults(null);
       
       const response = await axios.get(`/search?q=${encodeURIComponent(searchTerm)}`);
       const searchResults = response.data;
@@ -107,10 +128,78 @@ export default function SearchResults({ query }: SearchResultsProps) {
     }
   };
 
+  const performAdvancedSearch = async (searchTerm: string, page: number = 1) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params = new URLSearchParams({
+        q: searchTerm,
+        type: filters.type,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+        page: page.toString(),
+        limit: '20',
+      });
+
+      if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+      if (filters.dateTo) params.append('dateTo', filters.dateTo);
+
+      const response = await axios.get(`/search/advanced?${params.toString()}`);
+      setAdvancedResults(response.data);
+      console.log('advancedResults', response.data);
+      setCurrentPage(page);
+    } catch (err: any) {
+      console.error('Advanced search error:', err);
+      setError('Failed to perform advanced search. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      if (useAdvancedSearch) {
+        performAdvancedSearch(searchQuery.trim());
+      } else {
+        router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      }
+    }
+  };
+
+  const handleFiltersChange = (newFilters: SearchFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleApplyFilters = () => {
+    console.log('Apply filters clicked', filters);
+    setUseAdvancedSearch(true);
+    setCurrentPage(1);
+    if (searchQuery.trim()) {
+      performAdvancedSearch(searchQuery.trim(), 1);
+    }
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      type: 'all',
+      dateFrom: '',
+      dateTo: '',
+      sortBy: 'relevance',
+      sortOrder: 'desc',
+    });
+    setUseAdvancedSearch(false);
+    setAdvancedResults(null);
+    setCurrentPage(1);
+    if (searchQuery.trim()) {
+      performBasicSearch(searchQuery.trim());
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    if (useAdvancedSearch && searchQuery.trim()) {
+      performAdvancedSearch(searchQuery.trim(), page);
     }
   };
 
@@ -182,7 +271,29 @@ export default function SearchResults({ query }: SearchResultsProps) {
           )}
         </div>
 
-        {/* Loading State */}
+        {/* Advanced Search Filters */}
+        <div className="mb-6">
+          <AdvancedSearchFilters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onApplyFilters={handleApplyFilters}
+            onResetFilters={handleResetFilters}
+            isLoading={loading}
+          />
+        </div>
+
+        {/* Results */}
+        {useAdvancedSearch ? (
+          <AdvancedSearchResults
+            results={advancedResults || { tags: [], posts: [], users: [], totalCount: 0, currentPage: 1, totalPages: 0 }}
+            searchType={filters.type}
+            query={query}
+            onPageChange={handlePageChange}
+            isLoading={loading}
+          />
+        ) : (
+          <>
+            {/* Loading State */}
         {loading && (
           <div className="text-center py-8">
             <div className="text-lg text-gray-600">Searching...</div>
@@ -237,9 +348,12 @@ export default function SearchResults({ query }: SearchResultsProps) {
                       {results.tags.map((tag) => (
                         <div key={tag.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
                           <div className="flex items-center mb-2">
-                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                            <Link 
+                              href={`/tags/${tag.id}`}
+                              className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors"
+                            >
                               #{tag.name}
-                            </span>
+                            </Link>
                           </div>
                           <p className="text-sm text-gray-600 mb-2">
                             {tag.posts.length} post{tag.posts.length !== 1 ? 's' : ''}
@@ -292,12 +406,13 @@ export default function SearchResults({ query }: SearchResultsProps) {
                           {post.tags.length > 0 && (
                             <div className="flex gap-2 flex-wrap">
                               {post.tags.slice(0, 4).map((tagItem) => (
-                                <span
+                                <Link
                                   key={tagItem.tag.id}
-                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
+                                  href={`/tags/${tagItem.tag.id}`}
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition-colors"
                                 >
                                   #{tagItem.tag.name}
-                                </span>
+                                </Link>
                               ))}
                               {post.tags.length > 4 && (
                                 <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
@@ -412,6 +527,8 @@ export default function SearchResults({ query }: SearchResultsProps) {
               )}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

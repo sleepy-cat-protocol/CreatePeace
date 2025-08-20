@@ -23,6 +23,7 @@ export class UsersService {
   }
 
   async getUserProfile(id: string) {
+    console.log('start getUserProfile service', id);
     const user = await this.prisma.users.findUnique({
       where: { id },
       select: {
@@ -256,7 +257,11 @@ export class UsersService {
 
   async getUserFollowing(userId: string, page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
-
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.error('Invalid UUID format for userId:', userId);
+      return [];
+    }
     const following = await this.prisma.user_follows.findMany({
       where: { follower_id: userId },
       include: {
@@ -472,5 +477,147 @@ export class UsersService {
       totalPages: Math.ceil(totalCollectedPosts / limit),
       currentPage: page,
     };
+  }
+
+  async getSubscriptionFeed(userId: string, page: number = 1, limit: number = 20) {
+    console.log('start getSubscriptionFeed service', userId);
+    const skip = (page - 1) * limit;
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Get posts from users that the current user is following, published in the last week
+    const posts = await this.prisma.posts.findMany({
+      where: {
+        AND: [
+          {
+            status: 'PUBLISHED' as any,
+          },
+          {
+            published_at: {
+              gte: oneWeekAgo,
+            },
+          },
+          {
+            author_id: {
+              in: await this.getFollowingUserIds(userId),
+            },
+          },
+        ],
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            email: true,
+            avatar_url: true,
+          },
+        },
+        tags: {
+          include: {
+            tag: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            collections: true,
+            comments: true,
+          },
+        },
+      },
+      orderBy: {
+        published_at: 'desc',
+      },
+      skip,
+      take: limit,
+    });
+
+    console.log('posts', posts);
+
+    const totalCount = await this.prisma.posts.count({
+      where: {
+        AND: [
+          {
+            status: 'PUBLISHED' as any,
+          },
+          {
+            published_at: {
+              gte: oneWeekAgo,
+            },
+          },
+          {
+            author_id: {
+              in: await this.getFollowingUserIds(userId),
+            },
+          },
+        ],
+      },
+    });
+
+    console.log('totalCount', totalCount);
+
+    return {
+      posts,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+    };
+  }
+
+  private async getFollowingUserIds(userId: string): Promise<string[]> {
+    console.log('start getFollowingUserIds', userId);
+    const following = await this.prisma.user_follows.findMany({
+      where: { follower_id: userId },
+      select: { following_id: true },
+    });
+
+    console.log('following', following);
+
+    return following.map(f => f.following_id);
+  }
+
+  async subscribeToTag(userId: string, tagId: string) {
+    try {
+      const subscription = await this.prisma.user_tag_subscriptions.create({
+        data: {
+          user_id: userId,
+          tag_id: tagId,
+        },
+      });
+      return { message: 'Successfully subscribed to tag', subscription };
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        throw new Error('Already subscribed to this tag');
+      }
+      throw error;
+    }
+  }
+
+  async unsubscribeFromTag(userId: string, tagId: string) {
+    const deleted = await this.prisma.user_tag_subscriptions.deleteMany({
+      where: {
+        user_id: userId,
+        tag_id: tagId,
+      },
+    });
+
+    if (deleted.count === 0) {
+      throw new Error('Not subscribed to this tag');
+    }
+
+    return { message: 'Successfully unsubscribed from tag' };
+  }
+
+  async getTagSubscriptionStatus(userId: string, tagId: string) {
+    const subscription = await this.prisma.user_tag_subscriptions.findFirst({
+      where: {
+        user_id: userId,
+        tag_id: tagId,
+      },
+    });
+
+    return { isSubscribed: !!subscription };
   }
 }

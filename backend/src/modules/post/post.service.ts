@@ -434,6 +434,78 @@ export class PostService {
     };
   }
 
+  async incrementViewCount(postId: string, userId?: string, ipAddress?: string) {
+    // Check if post exists
+    const post = await this.prisma.posts.findUnique({
+      where: { id: postId },
+      select: { id: true, author_id: true, view_count: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    // Don't count views from the post author
+    if (userId && post.author_id === userId) {
+      return { message: 'Author view not counted', view_count: post.view_count };
+    }
+
+    // Check if this user/IP has already viewed this post recently
+    const orConditions: Array<{ user_id?: string; ip_address?: string }> = [];
+    if (userId) orConditions.push({ user_id: userId });
+    if (ipAddress) orConditions.push({ ip_address: ipAddress });
+
+    const existingView = await this.prisma.post_views.findFirst({
+      where: {
+        post_id: postId,
+        ...(orConditions.length > 0 && { OR: orConditions }),
+        // Only count views older than 1 hour as new views
+        viewed_at: {
+          gte: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
+        },
+      },
+    });
+
+    if (existingView) {
+      return { 
+        message: 'View already counted recently', 
+        view_count: post.view_count 
+      };
+    }
+
+    // Record the view and increment counter in a transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Create view record
+      await tx.post_views.create({
+        data: {
+          post_id: postId,
+          user_id: userId || null,
+          ip_address: ipAddress || null,
+        },
+      });
+
+      // Increment view count
+      const updatedPost = await tx.posts.update({
+        where: { id: postId },
+        data: {
+          view_count: {
+            increment: 1,
+          },
+        },
+        select: {
+          view_count: true,
+        },
+      });
+
+      return updatedPost;
+    });
+
+    return { 
+      message: 'View counted successfully', 
+      view_count: result.view_count 
+    };
+  }
+
   private generateSlug(title: string): string {
     return title
       .toLowerCase()

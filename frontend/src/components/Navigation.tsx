@@ -113,10 +113,10 @@ export default function Navigation() {
                 My Dashboard
               </Link>
               <Link
-                href="/subscribed-posts"
+                href="/subscription"
                 className="text-gray-600 hover:text-gray-800 text-sm font-medium"
               >
-                Subscribed Posts
+                Subscription Feed
               </Link>
               <Link
                 href="/create-post"

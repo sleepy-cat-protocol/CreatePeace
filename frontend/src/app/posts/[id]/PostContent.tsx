@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
 import Link from 'next/link';
 import PostActions from '@/components/PostActions';
+import CommentsSection from '@/components/CommentsSection';
 
 interface Post {
   id: string;
@@ -81,6 +82,13 @@ export default function PostContent({ postId }: PostContentProps) {
       fetchPost();
   }, [isAuthenticated, authLoading, router, postId]);
 
+  useEffect(() => {
+    // Track view when post is loaded
+    if (post && postId) {
+      trackView();
+    }
+  }, [post, postId]);
+
   const fetchPost = async () => {
     try {
       setLoading(true);
@@ -104,6 +112,17 @@ export default function PostContent({ postId }: PostContentProps) {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const trackView = async () => {
+    try {
+      // Track view for both authenticated and unauthenticated users
+      await axios.post(`/posts/${postId}/view`);
+      console.log('View tracked for post:', postId);
+    } catch (err: any) {
+      // Silently fail view tracking - it shouldn't affect user experience
+      console.log('Failed to track view:', err.message);
     }
   };
 
@@ -329,6 +348,14 @@ export default function PostContent({ postId }: PostContentProps) {
             </div>
           </div>
         </article>
+
+        {/* Comments Section */}
+        <div className="mt-12">
+          <CommentsSection 
+            postId={post.id} 
+            initialCount={post._count?.comments || 0}
+          />
+        </div>
 
         {/* Actions */}
         <div className="mt-8 flex justify-between items-center">
